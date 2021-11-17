@@ -2,6 +2,7 @@
 /.build
 /Packages
 /*.xcodeproj
+/Frameworks
 xcuserdata/
 Package.resolved
 Documentation
