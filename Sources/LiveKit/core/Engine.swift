@@ -11,8 +11,10 @@ class Engine: MulticastDelegate<EngineDelegate> {
         RTCInitializeSSL()
         let encoderFactory = RTCDefaultVideoEncoderFactory()
         let decoderFactory = RTCDefaultVideoDecoderFactory()
-        let simulcastFactory = RTCVideoEncoderFactorySimulcast(primary: encoderFactory,
-                                                               fallback: encoderFactory)
+      // let simulcastFactory = RTCVideoEncoderFactorySimulcast(primary: encoderFactory,
+      //                                                        fallback: encoderFactory)
+
+        let simulcastFactory = encoderFactory
         return RTCPeerConnectionFactory(encoderFactory: simulcastFactory,
                                         decoderFactory: decoderFactory)
     }()
