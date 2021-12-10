@@ -19,12 +19,21 @@ public class Room: MulticastDelegate<RoomDelegate> {
     //    private let monitorQueue: DispatchQueue
     private var prevPath: NWPath?
     private var lastPathUpdate: TimeInterval = 0
-    internal lazy var engine = Engine(delegate: self)
+    internal lazy var engine = Engine(room: self)
+
+    internal private(set) var connectOptions: ConnectOptions?
+    internal private(set) var roomOptions: RoomOptions?
+
     public var state: ConnectionState {
         engine.connectionState
     }
 
-    init(delegate: RoomDelegate? = nil) {
+    init(delegate: RoomDelegate? = nil,
+         connectOptions: ConnectOptions? = nil,
+         roomOptions: RoomOptions? = nil) {
+
+        self.connectOptions = connectOptions
+        self.roomOptions = roomOptions
 
         super.init()
 
@@ -70,18 +79,20 @@ public class Room: MulticastDelegate<RoomDelegate> {
     @discardableResult
     func connect(_ url: String,
                  _ token: String,
-                 options: ConnectOptions? = nil) -> Promise<Room> {
+                 connectOptions: ConnectOptions? = nil,
+                 roomOptions: RoomOptions? = nil) -> Promise<Room> {
+
+        // update options if specified
+        self.connectOptions = connectOptions ?? self.connectOptions
+        self.roomOptions = roomOptions ?? self.roomOptions
+
         logger.info("connecting to room")
         guard localParticipant == nil else {
             return Promise(EngineError.invalidState("localParticipant is not nil"))
         }
 
         // monitor.start(queue: monitorQueue)
-        return engine.connect(url,
-                              token,
-                              options: options).then {
-                                self
-                              }
+        return engine.connect(url, token).then { self }
     }
 
     @discardableResult
@@ -333,5 +344,17 @@ extension Room: EngineDelegate {
 
     func engine(_ engine: Engine, didFailConnection error: Error) {
         notify { $0.room(self, didFailToConnect: error) }
+    }
+
+    func engine(_ engine: Engine, didUpdate trackStates: [Livekit_StreamStateInfo]) {
+
+        for update in trackStates {
+            // Try to find RemoteParticipant
+            guard let participant = remoteParticipants[update.participantSid] else { continue }
+            // Try to find RemoteTrackPublication
+            guard let trackPublication = participant.tracks[update.trackSid] as? RemoteTrackPublication else { continue }
+            // Update streamState (and notify)
+            trackPublication.streamState = update.state.toLKType()
+        }
     }
 }

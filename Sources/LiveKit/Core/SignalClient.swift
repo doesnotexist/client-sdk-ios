@@ -15,13 +15,13 @@ internal class SignalClient: MulticastDelegate<SignalClientDelegate> {
 
     func connect(_ url: String,
                  _ token: String,
-                 options: ConnectOptions? = nil,
+                 connectOptions: ConnectOptions? = nil,
                  reconnect: Bool = false) -> Promise<Void> {
 
         Promise<Void> { () -> Void in
             let rtcUrl = try Utils.buildUrl(url,
                                             token,
-                                            options: options ,
+                                            connectOptions: connectOptions,
                                             reconnect: reconnect)
             logger.debug("connecting with url: \(rtcUrl)")
 
@@ -109,6 +109,9 @@ internal class SignalClient: MulticastDelegate<SignalClientDelegate> {
 
             case .leave:
                 notify { $0.signalClientDidLeave(self) }
+
+            case .streamStateUpdate(let states):
+                notify { $0.signalClient(self, didUpdate: states.streamStates) }
 
             default:
                 logger.warning("unsupported signal response type: \(msg)")
